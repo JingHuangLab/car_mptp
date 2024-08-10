@@ -1,0 +1,26 @@
+* make a dcd file out of a series of cor.
+* Zilin Song, 20231203
+* 
+
+! { read ffs. }
+read  rtf card flex name ../0_setups/toppar/top_all36_na.rtf
+read para card flex name ../0_setups/toppar/par_all36_na.prm
+stream                   ../0_setups/toppar/toppar_water_ions.str
+
+! { dcd output. }
+set nrep 80
+
+read  psf card name ./cors/dna.psf
+open write unit 22 file name ./cors/dna.dcd
+traj iwrite 22 nwrite 1 nfile @{nrep} skip 1
+
+set irep 0
+
+label dcd_loop
+ read coor card name ./cors/r@{irep}.cor
+ traj write
+ 
+incr irep by 1
+if @{irep} .lt. @{nrep} goto dcd_loop
+
+stop

@@ -1,0 +1,76 @@
+* solvate the in vaccum optimized mep. 
+* Zilin Song, 20231204
+* 
+
+! { read ffs. }
+read  rtf card flex name ../0_setups/toppar/top_all36_na.rtf
+read para card flex name ../0_setups/toppar/par_all36_na.prm
+stream                   ../0_setups/toppar/toppar_water_ions.str
+
+! { solvate the mep replicas one by one. }
+read  psf card name ../0_setups/guess/dna.psf
+read coor  pdb name ../1_mep_vaccum/mep/r0.pdb
+
+!! orient about origin
+coor orient
+coor statistics sele all end ! ~ 45 A.
+
+write coor card name ./cors/tmp.cor
+
+!! append water box.
+read sequence TIP3 46656
+generate TIP3 noan nodi
+read coor card name ../0_setups/cors/water.cor append
+
+!! orient water box.
+coor orient noro sele segid TIP3 end
+
+! { trim water box. }
+!! remove outbound water.
+calc xdim = 65.
+calc posxdim = @{xdim} / 2.
+calc negxdim = -@{posxdim}
+delete atom sort select .byres. ( -
+       property x .gt. @{posxdim} .or. property x .lt. @{negxdim} -
+  .or. property y .gt. @{posxdim} .or. property y .lt. @{negxdim} -
+  .or. property z .gt. @{posxdim} .or. property z .lt. @{negxdim} ) -
+end
+
+!! remove overlaping water.
+dele atom sort sele .byres. (segid TIP3 .and. (segid A .around. 3.)) end
+
+!! retain only water box.
+dele atom sele segid A end
+
+!! output water box.
+write  psf card name ./cors/solv.psf
+write coor card name ./cors/solv.cor
+
+!! remove all.
+dele atom sele all end
+
+! { loop all replica coordinates for overlaping water removal. }
+set irep 0
+set nrep 80
+
+label remove_loop
+ read  psf card name ../0_setups/guess/dna.psf
+ read coor  pdb name ../1_mep_vaccum/mep/r@{irep}.pdb
+ read coor card name ./cors/tmp.cor comp
+ 
+ coor orient rms
+
+ read  psf card name ./cors/solv.psf append
+ read coor card name ./cors/solv.cor append
+
+ dele atom sort sele .byres. (segid A .around. 3.) end
+
+ write  psf card name ./cors/solv.psf
+ write coor card name ./cors/solv.cor
+
+ dele atom sele all end
+
+incr irep by 1
+if @{irep} .lt. @{nrep} goto remove_loop
+
+stop

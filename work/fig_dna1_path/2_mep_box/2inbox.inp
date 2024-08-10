@@ -1,0 +1,41 @@
+* put in vaccum mep into the neutralized box. 
+* Zilin Song, 20231204
+* 
+
+! { read ffs. }
+read  rtf card flex name ../../fig_dna0_path/0_setups/toppar/top_all36_na.rtf
+read para card flex name ../../fig_dna0_path/0_setups/toppar/par_all36_na.prm
+stream                   ../../fig_dna0_path/0_setups/toppar/toppar_water_ions.str
+
+! { orient about origin. }
+read  psf card name ../0_setups/guess/dna.psf
+read coor  pdb name ../1_mep_vaccum/mep/r0.pdb
+
+coor orient
+coor statistics sele all end ! ~ 45 A.
+
+write coor card name ./cors/tmp.cor
+
+! { loop all replica coordinates. }
+set irep 0
+set nrep 80
+
+label solv_loop
+ read  psf card name ../0_setups/guess/dna.psf
+ read coor  pdb name ../1_mep_vaccum/mep/r@{irep}.pdb
+ read coor card name ./cors/tmp.cor comp
+ 
+ coor orient rms
+
+ read  psf card name ../../fig_dna0_path/2_mep_box/cors/neutr_solv.psf append
+ read coor card name ../../fig_dna0_path/2_mep_box/cors/neutr_solv.cor append
+
+ write  psf card name ./cors/dna.psf
+ write coor card name ./cors/r@{irep}.cor
+
+ dele atom sele all end
+
+incr irep by 1
+if @{irep} .lt. @{nrep} goto solv_loop
+
+stop

@@ -1,0 +1,9 @@
+name: pycospath
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - openmm
+  - matplotlib
+  - scipy
+  - pytest

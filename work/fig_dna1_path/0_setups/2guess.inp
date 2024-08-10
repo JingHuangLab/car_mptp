@@ -1,0 +1,93 @@
+* a6-dna setup.
+* Zilin Song 20231203
+* 
+
+! { read ffs. }
+read  rtf card flex name ../../fig_dna0_path/0_setups/toppar/top_all36_na.rtf
+read para card flex name ../../fig_dna0_path/0_setups/toppar/par_all36_na.prm
+stream                   ../../fig_dna0_path/0_setups/toppar/toppar_water_ions.str
+
+! { read psf and cor. }
+read  psf card name ../../fig_dna0_path/0_setups/cors/dna.psf
+read coor card name ../../fig_dna0_path/0_setups/cors/dna.cor
+
+! { output init. }
+write  psf card name ./guess/dna.psf
+write coor card name ./guess/r0.cor
+
+! { loop for all replicas. }
+
+set nrep 32
+set irep  0
+calc ddihe  = 180.  / ( @{nrep} - 1 )
+calc ddist0 =   3.  / ( @{nrep} - 1 )
+! calc ddist1 =   0.8 / @{nrep}
+
+label rep_loop
+
+ calc idihe  = -120.  - @{ddihe} *@{irep}   ! Changed here, rotate in the opposite direction.
+ calc idist0 =    6.4 - @{ddist0}*@{irep}
+ ! calc idist1 =    3.7 + @{ddist1}*@{irep}
+
+ ! { ic edit the chi dihedral. }
+ ic generate
+ ic fill preserve
+
+ ic edit
+ dihe A 16 O4'  A 16 C1'  A 16  N9   A 16  C4 @{idihe}
+ end
+ coor init sele resid 16 end
+ ic build
+
+ ! { minimization with dihedral and distance restraints. }
+ cons fix sele .not. ( resid 16  .or. resid 9 ) .or. type O5' end ! (resid 17 .and. (type N6 .or. type H6*)) .or. resid 1 .or. resid 24 end
+ cons dihe A 16 O4'  A 16 C1'  A 16  N9   A 16  C4 force 5000. min @{idihe} period 1. width 0.
+
+ resd kval 200. rval. @{idist0} positive 1. A 16  N7 A  9  N3 ! Hg N-N Hbond.
+ resd kval 500. rval.   2.8     positive 1. A 16  N6 A  9  O4 ! Hg N-O Hbond.
+
+ if @{irep} .ge. 2 then
+  if @{irep} .le. 13 then
+   resd kval 500. rval.   11.     negative 1. A 16  C5 A 17  O4'
+   resd kval 500. rval.    7.     negative 1. A 16  C5 A 10  N2
+  endif
+ endif
+ 
+ mini abnr nstep 2000
+ 
+ resd reset
+
+ if @{irep} .ge. 1 then
+  if @{irep} .le. 14 then
+   resd kval 100. rval.   9.     negative 1. A 16  C5 A 17  O4'
+   resd kval 100. rval.   7.     negative 1. A 16  C5 A 10  N2
+  endif
+ endif
+
+ mini abnr nstep 100
+ 
+ cons fix sele none end
+ cons cldh
+
+ ! { write psf and cor. }
+ write coor card name ./guess/r@{irep}.cor
+
+incr irep by 1
+if @{irep} .lt. @{nrep} goto rep_loop
+
+set irep 1
+
+!! ZS: override all THY coordinates to remove weird sugar puckering. 
+
+label cor_loop
+ read  psf card name ./guess/dna.psf
+ read coor card name ./guess/r@{irep}.cor
+ read coor card sele .byres. ( resname THY ) end name ./guess/r0.cor 
+ 
+ write coor card name ./guess/r@{irep}.cor
+
+incr irep by 1
+if @{irep} .lt. @{nrep} goto cor_loop
+
+
+stop

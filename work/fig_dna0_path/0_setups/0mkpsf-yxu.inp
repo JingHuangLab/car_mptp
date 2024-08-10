@@ -1,0 +1,74 @@
+* a6-dna setup.
+* You Xu 20231203
+* 
+
+! { read ffs. }
+read  rtf card flex name ./toppar/top_all36_na.rtf
+read para card flex name ./toppar/par_all36_na.prm
+stream                   ./toppar/toppar_water_ions.str
+
+! { psf and cor. }
+!! for chain a.
+read sequ  pdb name ./pdbs/dna_chain_a.pdb
+generate A setup warn first 5ter last 3ter
+
+set i 1
+patch deo5 a @i
+label chain_a
+  incr i by 1
+  patch deox a @i
+  if i .lt. 12 goto chain_a
+
+read coor  pdb name ./pdbs/dna_chain_a.pdb offset 0
+
+!! fix coordinates.
+ic param
+ic build
+coor init sele type H* end
+hbuild sele type H* end
+
+!! output chain a.
+write  psf card name ./cors/dna_chain_a.psf
+write coor card name ./cors/dna_chain_a.cor
+
+!! clean up.
+delete atom sele all end
+
+!! for chain b.
+read sequ  pdb name ./pdbs/dna_chain_b.pdb
+generate B setup warn first 5ter last 3ter
+
+set i 13
+patch deo5 b @i
+label chain_b
+  incr i by 1
+  patch deox b @i
+  if i .lt. 24 goto chain_b
+
+read coor  pdb name ./pdbs/dna_chain_b.pdb offset -12
+
+!! fix coordinates.
+ic param
+ic build
+coor init sele type H* end
+hbuild sele type H* end
+
+!! output chain b.
+write  psf card name ./cors/dna_chain_b.psf
+write coor card name ./cors/dna_chain_b.cor
+
+!! clean up.
+dele atom sele all end
+
+! { join chain a and b and output. }
+read  psf card name ./cors/dna_chain_a.psf
+read coor card name ./cors/dna_chain_a.cor
+read  psf card name ./cors/dna_chain_b.psf append
+read coor card name ./cors/dna_chain_b.cor append
+
+join A B renum
+
+write  psf card name ./cors/dna.psf
+write coor card name ./cors/dna.cor
+
+stop

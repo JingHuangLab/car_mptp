@@ -1,0 +1,32 @@
+# Mac misc.
+.DS_Store
+
+# Byte-compiled.
+__pycache__/
+.ipynb_checkpoints
+.pytest_cache
+
+# Large data files.
+mpid_2019g_220512.xml
+mpid_2019g_220628_pme.xml
+toppar_drude_master_protein_2019g.str
+
+*.dcd
+*.log
+*.npy
+*.npz
+*.pkl
+*.xml
+*.chk
+*.cor
+*.psf
+*.pdb
+
+# Runtime.
+slurm*
+
+# IDEs
+.vscode
+
+# misc
+tests_old/

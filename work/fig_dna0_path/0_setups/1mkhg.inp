@@ -1,0 +1,43 @@
+* a6-dna setup.
+* Zilin Song 20231203
+* 
+
+! { read ffs. }
+read  rtf card flex name ./toppar/top_all36_na.rtf
+read para card flex name ./toppar/par_all36_na.prm
+stream                   ./toppar/toppar_water_ions.str
+
+! { read psf and cor. }
+read  psf card name ./cors/dna.psf
+read coor card name ./cors/dna.cor
+
+! { output init. }
+write  psf card name ./guess/dna.psf
+write coor card name ./guess/dna_wc.cor
+
+! { ic edit the chi dihedral. }
+ic generate
+ic fill preserve
+
+ic edit
+dihe A 16 O4'  A 16 C1'  A 16  N9   A 16  C4 80.
+end
+coor init sele resid 16 end
+ic build
+
+! { minimization with dihedral and distance restraints. }
+cons fix sele resid 1 .or. resid 24 end
+cons dihe A 16 O4'  A 16 C1'  A 16  N9   A 16  C4 force 1000. min 80. period 1. width 3.
+resd kval 100. rval. 2. 1. A 16  N6 A  9  O4
+mini abnr nstep 2000.
+
+resd reset
+cons cldh
+mini abnr nstep 2000.
+
+cons fix sele none end
+
+! { write psf and cor. }
+write coor card name ./guess/dna_hg.cor
+
+stop

@@ -1,0 +1,111 @@
+* neutralize solvation box. 
+* Zilin Song, 20231204
+* 
+
+! { read ffs. }
+read  rtf card flex name ../0_setups/toppar/top_all36_na.rtf
+read para card flex name ../0_setups/toppar/par_all36_na.prm
+stream                   ../0_setups/toppar/toppar_water_ions.str
+
+! { read the solvated system. }
+read  psf card name ../0_setups/guess/dna.psf
+read coor  pdb name ../1_mep_vaccum/mep/r0.pdb
+read coor card name ./cors/tmp.cor comp
+
+coor orient rms
+
+read  psf card name ./cors/solv.psf append
+read coor card name ./cors/solv.cor append
+
+! { replace waters for ions. }
+!! template.
+write  psf card name ./cors/neutr_solv.psf
+write coor card name ./cors/neutr_solv.cor
+
+!! ion specs.
+set negtype CLA
+set negsegname Cl
+set postype SOD
+set possegname Na
+
+!! min. num. of neg/pos ions.
+set numneg 22
+set numpos 22
+
+!! num. of neg/pos ions for system net charge to zero.
+scalar charge stat sele all end
+set charge = ?stot
+
+if @charge .gt. 0 then
+ calc numneg = @numneg + @charge      ! let neg ion be more than 20 to balance the charge
+ set iontype  CLA
+endif
+if @charge .lt. 0 then
+ calc numpos = @numpos + abs(@charge)
+ set iontype SOD 
+endif
+
+!! ion placing specs.
+set mnd 5.5                 ! min. dist. to neighbor
+set sol .not. segid TIP3    ! solute.
+random uniform iseed 114514
+
+!! add negative ions.
+if @numneg .lt. 1 goto skipneg
+ 
+read sequ @{negtype} @{numneg}
+generate @{negsegname} noan nodi
+coor set xdir 0. ydir 0. zdir 0. sele segid @{negsegname} end
+
+!! random water replacement for negative ions.
+set k 1
+label replace_neg
+ define xcld sele ( @{sol} ) .or. segid @{negsegname} end   ! non-water segments.
+ define prox sele xcld .around. @{mnd} end                  ! non-water region.
+ define list sele atom TIP3 * OH2 .and. .not. prox end      ! water region with TIP3 oxygens.
+ calc in int ( ?rand * ?nsel )
+ if in .le. 1 set in ?nsel
+ define targ sele list .subset. @in end
+ coor stat sele targ end
+ coor set xdir ?xave ydir ?yave zdir ?zave sele atom @negsegname @k @negtype end
+ dele atom sort sele .byres. targ end 
+
+incr k by 1
+if k .le. @numneg goto replace_neg
+
+label skipneg
+
+!! add negative ions.
+if @numpos .lt. 1 goto skippos
+
+read sequ @{postype} @{numpos}
+generate @{possegname} noan nodi
+coor set xdir 0. ydir 0. zdir 0. sele segid @{possegname} end
+
+!! random water replacement for positive ions.
+set k 1
+label replace_pos
+ define xcld sele ( @{sol} ) .or. segid @{negsegname} .or. segid @{possegname} end
+ define prox sele xcld .around. @{mnd} end
+ define list sele atom TIP3 * OH2 .and. .not. prox end
+ calc in int ( ?rand * ?nsel )
+ if in .le. 1 set in ?nsel
+ define targ sele list .subset. @in end
+ coor stat sele targ end
+ coor set xdir ?xave ydir ?yave zdir ?zave sele atom @possegname @k @postype end
+ dele atom sort sele .byres. targ end 
+
+incr k by 1
+if k .le. @numpos goto replace_pos
+
+label skippos
+
+! { sort psf and output the neutralized water box. }
+join TIP3 renum
+
+dele atom sele segid A end
+
+write  psf card name ./cors/neutr_solv.psf
+write coor card name ./cors/neutr_solv.cor
+
+stop
