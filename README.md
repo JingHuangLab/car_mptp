@@ -1,5 +1,6 @@
 # CAR_MPTP
 
-This is the source codes for "Identifying Most Probable Transition Path with Constant Advance Replicas".
+Repo for "Identifying Most Probable Transition Path with Constant Advance Replicas".
 
----
+`./work`: source codes for each simulated system;  
+`./pycospath`: source codes for the CAR path algorithms.
